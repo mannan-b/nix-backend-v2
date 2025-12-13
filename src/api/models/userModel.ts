@@ -78,6 +78,17 @@ const userSchema = new Schema<IUser>(
   },
 );
 
+userSchema.index(
+    { email: 1 }, 
+    { 
+        unique: true, 
+        collation: { 
+            locale: "en", 
+            strength: 2 //fixes case sensitivity
+        } 
+    }
+);
+
 const User = mongoose.model<IUser>("user", userSchema);
 type PopulatedUser = mongoose.Document<
   unknown,
