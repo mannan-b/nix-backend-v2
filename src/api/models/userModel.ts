@@ -78,6 +78,25 @@ const userSchema = new Schema<IUser>(
   },
 );
 
+//Pre-save hook
+userSchema.pre("save", function (next){
+  if (this.isModified("email") && this.email){
+    this.email=this.email.toLowerCase();
+  }
+  next();
+});
+
+//Pre-find hook
+userSchema.pre(/^find/, function (next){
+  const query=this as any; 
+  const criteria=query.getFilter();
+
+  if (criteria.email && typeof criteria.email==="string"){
+    criteria.email=criteria.email.toLowerCase();
+  }
+  next();
+});
+
 const User = mongoose.model<IUser>("user", userSchema);
 type PopulatedUser = mongoose.Document<
   unknown,
