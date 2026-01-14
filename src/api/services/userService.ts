@@ -12,6 +12,10 @@ export interface ICheckUser {
   refreshToken?: string;
 }
 
+const escapeRegex = (text: string) => {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+};
+
 export const checkUserExists = async ({
   email,
   refreshToken,
@@ -20,7 +24,8 @@ export const checkUserExists = async ({
   // look into previous commit if this doesn't "look" good to you
   const conditions: object[] = [];
   if (_id) conditions.push({ _id });
-  if (email) conditions.push({ email });
+  if (email)
+    conditions.push({ email: { $regex: new RegExp(`^${escapeRegex(email)}$`, "i") } });
   if (refreshToken) conditions.push({ refreshToken });
 
   if (conditions.length > 0) {
@@ -90,13 +95,16 @@ export const createNewUser = async (
 export const createNewUsers = async (users: Array<IUser>) => {
   const createdUsers: HydratedDocument<IUser>[] = [];
   const incomingEmails = users.map((user) => user.email);
-  const existingUsers = await User.find({ email: { $in: incomingEmails } });
-  const existingEmails = existingUsers.map((user) => user.email);
+  const regexEmails = incomingEmails.map(
+    (email) => new RegExp(`^${escapeRegex(email)}$`, "i"),
+  );
+  const existingUsers = await User.find({ email: { $in: regexEmails } });
+  const existingEmails = existingUsers.map((user) => user.email.toLowerCase());
 
   console.log(existingEmails);
 
   for (const user of users) {
-    if (existingEmails.includes(user.email)) {
+    if (existingEmails.includes(user.email.toLowerCase())) {
       continue;
     }
     const password: string = generateRandomPassword(7);
