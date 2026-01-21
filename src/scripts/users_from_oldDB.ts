@@ -62,13 +62,16 @@ Promise.all([
   // create(new_users);
 });
 
+// Use safe bulk creation logic
+import * as UserService from "../api/services/userService";
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function create(users: IUser[]) {
-  User.insertMany(users, {
-    ordered: false,
-  })
-    .then(() => {
-      console.log("Users added successfully");
+  // This script should use the safe service which handles duplicates
+  UserService.createNewUsers(users)
+    .then(({ createdUsers, existingUsers }) => {
+      console.log("Created", createdUsers.length, "users");
+      console.log("Skipped", existingUsers.length, "existing users");
     })
     .catch((err) => {
       console.log(err);

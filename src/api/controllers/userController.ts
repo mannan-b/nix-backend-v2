@@ -185,7 +185,15 @@ export const postBulkUserController = asyncErrorHandler(
       })),
     );
 
-    const userDocsInserted = await User.insertMany(hashedUsers);
+    const incomingEmails = hashedUsers.map((user) => user.email);
+    const existingUsers = await UserService.findExistingUsersByEmail(incomingEmails);
+    const existingEmails = new Set(existingUsers.map((user) => user.email.toLowerCase()));
+
+    const usersToInsert = hashedUsers.filter((user) => {
+      return !existingEmails.has(user.email.toLowerCase());
+    });
+
+    const userDocsInserted = await User.insertMany(usersToInsert);
 
     res.status(StatusCode.OK).json({
       message: "User Data successfully inserted",
@@ -254,7 +262,20 @@ export const updateUserController = asyncErrorHandler(
 
     // Update user properties if provided in request body
     if (req.body.target_name) user.name = req.body.target_name;
-    if (req.body.target_email) user.email = req.body.target_email;
+    if (req.body.target_email) {
+      const existingUsers = await UserService.findExistingUsersByEmail([req.body.target_email]);
+      // If user exists and it's NOT the current user (case-insensitive check actually returns all content, 
+      // but findExistingUsersByEmail returns docs. If we find ANY doc that is NOT this user, it's a conflict.)
+      const conflict = existingUsers.find(u => !u._id.equals(user._id));
+      if (conflict) {
+        const error = new CustomError(
+          "Email already in use",
+          StatusCode.CONFLICT,
+        );
+        return next(error);
+      }
+      user.email = req.body.target_email;
+    }
     if (req.body.password) {
       const hashed_password: string = await bcrypt.hash(req.body.password, 10);
       user.password = hashed_password;
