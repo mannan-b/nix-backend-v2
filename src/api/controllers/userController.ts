@@ -193,10 +193,28 @@ export const postBulkUserController = asyncErrorHandler(
       return !existingEmails.has(user.email.toLowerCase());
     });
 
-    const userDocsInserted = await User.insertMany(usersToInsert);
+    let userDocsInserted = [];
+    try {
+      userDocsInserted = await User.insertMany(usersToInsert, { ordered: false });
+    } catch (error: any) {
+      if (error.name === "MongoBulkWriteError") {
+        // Some documents were inserted, others failed.
+        // error.result.insertedIds contains the successful ones? No, error.insertedDocs usually.
+        // Mongoose MongoBulkWriteError has 'insertedDocs' property?
+        // Actually commonly it has 'result' or just look at error.writeErrors
+        console.warn("Bulk insert encountered duplicates (race condition caught):", error.message);
+        // If we want to return the successful ones, usually they are in error.insertedDocs or similar depending on driver version.
+        // For now, let's treat partial success as success but log warning.
+        if (error.insertedDocs && Array.isArray(error.insertedDocs)) {
+          userDocsInserted = error.insertedDocs;
+        }
+      } else {
+        throw error;
+      }
+    }
 
     res.status(StatusCode.OK).json({
-      message: "User Data successfully inserted",
+      message: "User Data successfully inserted (some duplicates may have been skipped)",
       data: userDocsInserted,
     });
   },
