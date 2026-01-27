@@ -186,8 +186,11 @@ export const postBulkUserController = asyncErrorHandler(
     );
 
     const incomingEmails = hashedUsers.map((user) => user.email);
-    const existingUsers = await UserService.findExistingUsersByEmail(incomingEmails);
-    const existingEmails = new Set(existingUsers.map((user) => user.email.toLowerCase()));
+    const existingUsers =
+      await UserService.findExistingUsersByEmail(incomingEmails);
+    const existingEmails = new Set(
+      existingUsers.map((user) => user.email.toLowerCase()),
+    );
 
     const usersToInsert = hashedUsers.filter((user) => {
       return !existingEmails.has(user.email.toLowerCase());
@@ -195,14 +198,19 @@ export const postBulkUserController = asyncErrorHandler(
 
     let userDocsInserted = [];
     try {
-      userDocsInserted = await User.insertMany(usersToInsert, { ordered: false });
+      userDocsInserted = await User.insertMany(usersToInsert, {
+        ordered: false,
+      });
     } catch (error: any) {
       if (error.name === "MongoBulkWriteError") {
         // Some documents were inserted, others failed.
         // error.result.insertedIds contains the successful ones? No, error.insertedDocs usually.
         // Mongoose MongoBulkWriteError has 'insertedDocs' property?
         // Actually commonly it has 'result' or just look at error.writeErrors
-        console.warn("Bulk insert encountered duplicates (race condition caught):", error.message);
+        console.warn(
+          "Bulk insert encountered duplicates (race condition caught):",
+          error.message,
+        );
         // If we want to return the successful ones, usually they are in error.insertedDocs or similar depending on driver version.
         // For now, let's treat partial success as success but log warning.
         if (error.insertedDocs && Array.isArray(error.insertedDocs)) {
@@ -214,7 +222,8 @@ export const postBulkUserController = asyncErrorHandler(
     }
 
     res.status(StatusCode.OK).json({
-      message: "User Data successfully inserted (some duplicates may have been skipped)",
+      message:
+        "User Data successfully inserted (some duplicates may have been skipped)",
       data: userDocsInserted,
     });
   },
@@ -281,10 +290,12 @@ export const updateUserController = asyncErrorHandler(
     // Update user properties if provided in request body
     if (req.body.target_name) user.name = req.body.target_name;
     if (req.body.target_email) {
-      const existingUsers = await UserService.findExistingUsersByEmail([req.body.target_email]);
-      // If user exists and it's NOT the current user (case-insensitive check actually returns all content, 
+      const existingUsers = await UserService.findExistingUsersByEmail([
+        req.body.target_email,
+      ]);
+      // If user exists and it's NOT the current user (case-insensitive check actually returns all content,
       // but findExistingUsersByEmail returns docs. If we find ANY doc that is NOT this user, it's a conflict.)
-      const conflict = existingUsers.find(u => !u._id.equals(user._id));
+      const conflict = existingUsers.find((u) => !u._id.equals(user._id));
       if (conflict) {
         const error = new CustomError(
           "Email already in use",

@@ -29,7 +29,9 @@ export const checkUserExists = async ({
   const conditions: object[] = [];
   if (_id) conditions.push({ _id });
   if (email)
-    conditions.push({ email: { $regex: new RegExp(`^${escapeRegex(email)}$`, "i") } });
+    conditions.push({
+      email: { $regex: new RegExp(`^${escapeRegex(email)}$`, "i") },
+    });
   if (refreshToken) conditions.push({ refreshToken });
 
   if (conditions.length > 0) {
@@ -100,7 +102,9 @@ export const createNewUsers = async (users: Array<IUser>) => {
   const createdUsers: HydratedDocument<IUser>[] = [];
   const incomingEmails = users.map((user) => user.email);
   const existingUsers = await findExistingUsersByEmail(incomingEmails);
-  const existingEmails = new Set(existingUsers.map((user) => user.email.toLowerCase()));
+  const existingEmails = new Set(
+    existingUsers.map((user) => user.email.toLowerCase()),
+  );
 
   console.log(existingEmails);
 

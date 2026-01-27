@@ -78,8 +78,6 @@ const userSchema = new Schema<IUser>(
   },
 );
 
-
-
 const User = mongoose.model<IUser>("user", userSchema);
 type PopulatedUser = mongoose.Document<
   unknown,
