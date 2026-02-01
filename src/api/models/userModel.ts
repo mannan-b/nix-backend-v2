@@ -78,6 +78,12 @@ const userSchema = new Schema<IUser>(
   },
 );
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("email")) return next();
+  this.email = this.email.toLowerCase();
+  next();
+});
+
 const User = mongoose.model<IUser>("user", userSchema);
 type PopulatedUser = mongoose.Document<
   unknown,

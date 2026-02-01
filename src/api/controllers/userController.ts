@@ -181,6 +181,7 @@ export const postBulkUserController = asyncErrorHandler(
     const hashedUsers = await Promise.all(
       usersData.map(async (user) => ({
         ...user,
+        email: user.email.toLowerCase(),
         password: await bcrypt.hash(user.password, 10),
       })),
     );

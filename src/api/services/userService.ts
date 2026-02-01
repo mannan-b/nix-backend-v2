@@ -12,13 +12,11 @@ export interface ICheckUser {
   refreshToken?: string;
 }
 
-import { escapeRegex } from "../helpers/stringHelpers";
+// Removed escapeRegex as we now standardize on lowercase in DB
 
 export const findExistingUsersByEmail = async (emails: string[]) => {
-  const regexEmails = emails.map(
-    (email) => new RegExp(`^${escapeRegex(email)}$`, "i"),
-  );
-  return await User.find({ email: { $in: regexEmails } });
+  const normalizedEmails = emails.map((email) => email.toLowerCase());
+  return await User.find({ email: { $in: normalizedEmails } });
 };
 
 export const checkUserExists = async ({
@@ -28,10 +26,7 @@ export const checkUserExists = async ({
 }: ICheckUser): Promise<PopulatedUser | null> => {
   const conditions: object[] = [];
   if (_id) conditions.push({ _id });
-  if (email)
-    conditions.push({
-      email: { $regex: new RegExp(`^${escapeRegex(email)}$`, "i") },
-    });
+  if (email) conditions.push({ email: email.toLowerCase() });
   if (refreshToken) conditions.push({ refreshToken });
 
   if (conditions.length > 0) {
