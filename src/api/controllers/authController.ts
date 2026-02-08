@@ -292,8 +292,8 @@ export const postBulkUserController = asyncErrorHandler(
       return res.status(StatusCode.CONFLICT).json({
         message:
           createdUsers.length > 0
-            ? "Some users were added, but some already exist."
-            : "All provided users already exist.",
+        ? "Some users were added, but some already exist."
+        : "All provided users already exist.",
         data: {
           createdUsers,
           existingUsers,
