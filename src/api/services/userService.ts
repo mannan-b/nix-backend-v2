@@ -12,21 +12,15 @@ export interface ICheckUser {
   refreshToken?: string;
 }
 
-// Removed escapeRegex as we now standardize on lowercase in DB
-
-export const findExistingUsersByEmail = async (emails: string[]) => {
-  const normalizedEmails = emails.map((email) => email.toLowerCase());
-  return await User.find({ email: { $in: normalizedEmails } });
-};
-
 export const checkUserExists = async ({
   email,
   refreshToken,
   _id,
 }: ICheckUser): Promise<PopulatedUser | null> => {
+  // look into previous commit if this doesn't "look" good to you
   const conditions: object[] = [];
   if (_id) conditions.push({ _id });
-  if (email) conditions.push({ email: email.toLowerCase() });
+  if (email) conditions.push({ email });
   if (refreshToken) conditions.push({ refreshToken });
 
   if (conditions.length > 0) {
@@ -96,19 +90,15 @@ export const createNewUser = async (
 export const createNewUsers = async (users: Array<IUser>) => {
   const createdUsers: HydratedDocument<IUser>[] = [];
   const incomingEmails = users.map((user) => user.email);
-  const existingUsers = await findExistingUsersByEmail(incomingEmails);
-  const existingEmails = new Set(
-    existingUsers.map((user) => user.email.toLowerCase()),
-  );
+  const existingUsers = await User.find({ email: { $in: incomingEmails } });
+  const existingEmails = existingUsers.map((user) => user.email);
 
   console.log(existingEmails);
 
   for (const user of users) {
-    const normalizedEmail = user.email.toLowerCase();
-    if (existingEmails.has(normalizedEmail)) {
+    if (existingEmails.includes(user.email)) {
       continue;
     }
-    existingEmails.add(normalizedEmail);
     const password: string = generateRandomPassword(7);
     const hashed_password: string = await bcrypt.hash(password, 10);
     const newUser = await User.create({
