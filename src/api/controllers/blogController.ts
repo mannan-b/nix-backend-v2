@@ -934,29 +934,24 @@ export const deleteBlogController = asyncErrorHandler(
 export const takeDownMyBlogController = asyncErrorHandler(
   async (req, res, next) => {
     const { id } = req.params;
-    const blog = await Blog.findById(
-      // this implies user submitted blog accidentally and wants to take it down
-      { _id: new mongoose.Types.ObjectId(id) },
-    );
+
+    const blog = await Blog.findById(id);
 
     if (!blog) {
-      const error = new CustomError("Blog not found", StatusCode.NOT_FOUND);
-      return next(error);
+      return next(new CustomError("Blog not found", StatusCode.NOT_FOUND));
     }
+
     assertProtectedUser(res);
-    if (
-      res.locals.user_id.equals(blog.user.toString()) &&
-      blog.status !== BlogStatus.Published
-    ) {
-      // user can take down their own blog if not published
-      const make_pending: boolean | undefined = req.body.make_pending;
-      if (make_pending) {
-        blog.status = BlogStatus.Pending;
-      } else {
-        blog.status = BlogStatus.Draft;
-      }
+
+    const userIdStr = res.locals.user_id?.toString();
+    const blogUserIdStr = blog.user?.toString();
+
+    if (userIdStr && blogUserIdStr && userIdStr === blogUserIdStr) {
+      // Owner is taking down their own blog, move to draft
+      blog.status = BlogStatus.Draft;
       await blog.save();
     } else {
+      // Not the owner. Let the next middleware handle it (admin permission check)
       res.locals.blog = blog;
       return next();
     }
@@ -968,7 +963,7 @@ export const takeDownMyBlogController = asyncErrorHandler(
       message: "Blog taken down successfully",
       data: blog,
     });
-  },
+  }
 );
 
 /**
